@@ -3,21 +3,23 @@
  */
 package org.example;
 
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Node;
+import org.w3c.dom.Element;
 import java.io.File;
 import java.io.FileInputStream;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import java.util.Scanner;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class App {
     public String getGreeting() {
-        return "Hello World!";
-    }
-
+            return "Hello World!";
+            }
     public static void readXMLFile(File file, boolean[] selectedFields) {
+        
         try {
             if (!file.exists()) {
                 System.err.println("Error: The specified file does not exist.");
@@ -27,46 +29,37 @@ public class App {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document document = builder.parse(new FileInputStream(file));
-
             document.getDocumentElement().normalize();
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            ObjectNode rootNode = objectMapper.createObjectNode();
 
             NodeList nodeList = document.getElementsByTagName("record");
 
             for (int temp = 0; temp < nodeList.getLength(); temp++) {
                 Element element = (Element) nodeList.item(temp);
-                String name = selectedFields[0] ? element.getElementsByTagName("name").item(0).getTextContent() : "";
-                String postalZip = selectedFields[1] ? element.getElementsByTagName("postalZip").item(0).getTextContent() : "";
-                String region = selectedFields[2] ? element.getElementsByTagName("region").item(0).getTextContent() : "";
-                String country = selectedFields[3] ? element.getElementsByTagName("country").item(0).getTextContent() : "";
-                String address = selectedFields[4] ? element.getElementsByTagName("address").item(0).getTextContent() : "";
+                ObjectNode recordNode = objectMapper.createObjectNode();
 
-                System.out.println("Name: " + name);
-                System.out.println("Postal Zip: " + postalZip);
-                System.out.println("Region: " + region);
-                System.out.println("Country: " + country);
-                System.out.println("Address: " + address);
+                if (selectedFields[0]) recordNode.put("name", element.getElementsByTagName("name").item(0).getTextContent());
+                if (selectedFields[1]) recordNode.put("postalZip", element.getElementsByTagName("postalZip").item(0).getTextContent());
+                if (selectedFields[2]) recordNode.put("region", element.getElementsByTagName("region").item(0).getTextContent());
+                if (selectedFields[3]) recordNode.put("country", element.getElementsByTagName("country").item(0).getTextContent());
+                if (selectedFields[4]) recordNode.put("address", element.getElementsByTagName("address").item(0).getTextContent());
+
+                rootNode.set("record" + (temp + 1), recordNode);
             }
+
+            String jsonOutput = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
+            System.out.println(jsonOutput);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Select fields to display (1 for yes, 0 for no):");
-        System.out.print("Name: ");
-        boolean displayName = scanner.nextInt() == 1;
-        System.out.print("Postal Zip: ");
-        boolean displayPostalZip = scanner.nextInt() == 1;
-        System.out.print("Region: ");
-        boolean displayRegion = scanner.nextInt() == 1;
-        System.out.print("Country: ");
-        boolean displayCountry = scanner.nextInt() == 1;
-        System.out.print("Address: ");
-        boolean displayAddress = scanner.nextInt() == 1;
-
-        File file = new File("data.xml"); // Provide the path to your XML file here
-        readXMLFile(file, new boolean[]{displayName, displayPostalZip, displayRegion, displayCountry, displayAddress});
-        scanner.close();
+        File file = new File("data.xml");
+        boolean[] selectedFields = {true, true, true, true, true}; // Select all fields to display
+        readXMLFile(file, selectedFields);
     }
 }
