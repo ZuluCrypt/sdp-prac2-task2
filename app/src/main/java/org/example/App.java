@@ -3,8 +3,6 @@
  */
 package org.example;
 
-
-//package app.src.main.resources;
 import java.io.File;
 import java.io.FileInputStream;
 import javax.xml.parsers.DocumentBuilder;
@@ -12,19 +10,20 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
+import java.util.Scanner;
 
 public class App {
     public String getGreeting() {
         return "Hello World!";
     }
-    
-    public static void readXMLFile(File file) {
+
+    public static void readXMLFile(File file, boolean[] selectedFields) {
         try {
             if (!file.exists()) {
                 System.err.println("Error: The specified file does not exist.");
                 return;
             }
-            
+
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document document = builder.parse(new FileInputStream(file));
@@ -35,11 +34,11 @@ public class App {
 
             for (int temp = 0; temp < nodeList.getLength(); temp++) {
                 Element element = (Element) nodeList.item(temp);
-                String name = element.getElementsByTagName("name").item(0).getTextContent();
-                String postalZip = element.getElementsByTagName("postalZip").item(0).getTextContent();
-                String region = element.getElementsByTagName("region").item(0).getTextContent();
-                String country = element.getElementsByTagName("country").item(0).getTextContent();
-                String address = element.getElementsByTagName("address").item(0).getTextContent();
+                String name = selectedFields[0] ? element.getElementsByTagName("name").item(0).getTextContent() : "";
+                String postalZip = selectedFields[1] ? element.getElementsByTagName("postalZip").item(0).getTextContent() : "";
+                String region = selectedFields[2] ? element.getElementsByTagName("region").item(0).getTextContent() : "";
+                String country = selectedFields[3] ? element.getElementsByTagName("country").item(0).getTextContent() : "";
+                String address = selectedFields[4] ? element.getElementsByTagName("address").item(0).getTextContent() : "";
 
                 System.out.println("Name: " + name);
                 System.out.println("Postal Zip: " + postalZip);
@@ -51,10 +50,23 @@ public class App {
             e.printStackTrace();
         }
     }
-    
+
     public static void main(String[] args) {
-        System.out.println(new App().getGreeting());
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Select fields to display (1 for yes, 0 for no):");
+        System.out.print("Name: ");
+        boolean displayName = scanner.nextInt() == 1;
+        System.out.print("Postal Zip: ");
+        boolean displayPostalZip = scanner.nextInt() == 1;
+        System.out.print("Region: ");
+        boolean displayRegion = scanner.nextInt() == 1;
+        System.out.print("Country: ");
+        boolean displayCountry = scanner.nextInt() == 1;
+        System.out.print("Address: ");
+        boolean displayAddress = scanner.nextInt() == 1;
+
         File file = new File("data.xml"); // Provide the path to your XML file here
-        readXMLFile(file);
+        readXMLFile(file, new boolean[]{displayName, displayPostalZip, displayRegion, displayCountry, displayAddress});
+        scanner.close();
     }
 }

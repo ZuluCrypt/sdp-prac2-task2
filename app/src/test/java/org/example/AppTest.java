@@ -13,13 +13,16 @@ import org.w3c.dom.Node;
 import org.w3c.dom.Element;
 import java.io.File;
 class AppTest {
-    @Test void appHasAGreeting() {
+    @Test
+    void appHasAGreeting() {
         App classUnderTest = new App();
         assertNotNull(classUnderTest.getGreeting(), "app should have a greeting");
     }
 
-    @Test void readXMLFile() {
+    @Test
+    void readXMLFile() {
         File file = new File("app/src/main/resources/data.xml");
-        App.readXMLFile(file);
+        boolean[] selectedFields = {true, true, true, true, true}; // Select all fields to display
+        App.readXMLFile(file, selectedFields);
     }
 }
