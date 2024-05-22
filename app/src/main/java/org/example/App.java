@@ -3,16 +3,17 @@
  */
 package org.example;
 
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.DocumentBuilder;
-import org.w3c.dom.Document;
-import org.w3c.dom.NodeList;
-import org.w3c.dom.Node;
-import org.w3c.dom.Element;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
+
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
 import java.io.File;
-import java.io.FileInputStream;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 public class App {
     public String getGreeting() {
@@ -20,61 +21,27 @@ public class App {
             }
     public static void readXMLFile(File file, boolean[] selectedFields) {
         try {
-            // Validate if the file exists
             if (!file.exists()) {
                 System.err.println("Error: The specified file does not exist.");
                 return;
             }
 
+            // Create SAXParser instance
+            SAXParserFactory factory = SAXParserFactory.newInstance();
+            SAXParser saxParser = factory.newSAXParser();
+
+            // Create and configure handler
+            SAXHandler handler = new SAXHandler(selectedFields);
+
             // Parse XML file
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            Document document = builder.parse(new FileInputStream(file));
-            document.getDocumentElement().normalize();
+            saxParser.parse(file, handler);
 
-            // Create ObjectMapper for JSON serialization
-            ObjectMapper objectMapper = new ObjectMapper();
-            ObjectNode rootNode = objectMapper.createObjectNode();
+            // Print JSON output
+            System.out.println(handler.getJSONOutput());
 
-            // Get list of <record> elements
-            NodeList nodeList = document.getElementsByTagName("record");
-
-            // Process each <record> element
-            for (int temp = 0; temp < nodeList.getLength(); temp++) {
-                Node node = nodeList.item(temp);
-                if (node.getNodeType() == Node.ELEMENT_NODE) {
-                    Element element = (Element) node;
-                    ObjectNode recordNode = objectMapper.createObjectNode();
-
-                    // Populate record node with selected fields
-                    if (selectedFields[0]) recordNode.put("name", getElementValue(element, "name"));
-                    if (selectedFields[1]) recordNode.put("postalZip", getElementValue(element, "postalZip"));
-                    if (selectedFields[2]) recordNode.put("region", getElementValue(element, "region"));
-                    if (selectedFields[3]) recordNode.put("country", getElementValue(element, "country"));
-                    if (selectedFields[4]) recordNode.put("address", getElementValue(element, "address"));
-
-                    // Add record node to the root node
-                    rootNode.set("record" + (temp + 1), recordNode);
-                }
-            }
-
-            // Serialize the root node to JSON string
-            String jsonOutput = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(rootNode);
-            System.out.println(jsonOutput);
-
-        } catch (Exception e) {
-            // Handle any exceptions gracefully
+        } catch (ParserConfigurationException | SAXException | IOException e) {
             e.printStackTrace();
         }
-    }
-
-    // Helper method to get element value by tag name
-    private static String getElementValue(Element element, String tagName) {
-        NodeList nodeList = element.getElementsByTagName(tagName);
-        if (nodeList.getLength() > 0) {
-            return nodeList.item(0).getTextContent();
-        }
-        return null;
     }
 
     // Main method for testing
@@ -82,5 +49,74 @@ public class App {
         File file = new File("data.xml");
         boolean[] selectedFields = {true, true, true, true, true}; // Select all fields to display
         readXMLFile(file, selectedFields);
+    }
+
+    // SAX Handler class to handle XML parsing events
+    private static class SAXHandler extends DefaultHandler {
+        private StringBuilder data;
+        private boolean[] selectedFields;
+        private Map<String, String> record;
+        private StringBuilder jsonOutput;
+
+        public SAXHandler(boolean[] selectedFields) {
+            this.selectedFields = selectedFields;
+            this.jsonOutput = new StringBuilder();
+            this.record = new HashMap<>();
+            this.data = new StringBuilder();
+        }
+
+        @Override
+        public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
+            data.setLength(0);
+        }
+
+        @Override
+        public void endElement(String uri, String localName, String qName) throws SAXException {
+            if (qName.equalsIgnoreCase("record")) {
+                if (!record.isEmpty()) {
+                    appendRecordToJSON();
+                    record.clear();
+                }
+            } else {
+                if (isSelectedField(qName)) {
+                    record.put(qName, data.toString());
+                }
+            }
+        }
+
+        @Override
+        public void characters(char[] ch, int start, int length) throws SAXException {
+            data.append(new String(ch, start, length));
+        }
+
+        public String getJSONOutput() {
+            return jsonOutput.toString();
+        }
+
+        private boolean isSelectedField(String fieldName) {
+            switch (fieldName) {
+                case "name":
+                case "postalZip":
+                case "region":
+                case "country":
+                case "address":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private void appendRecordToJSON() {
+            jsonOutput.append("{");
+            boolean first = true;
+            for (Map.Entry<String, String> entry : record.entrySet()) {
+                if (!first) {
+                    jsonOutput.append(", ");
+                }
+                jsonOutput.append("\"").append(entry.getKey()).append("\": \"").append(entry.getValue()).append("\"");
+                first = false;
+            }
+            jsonOutput.append("}\n");
+        }
     }
 }
